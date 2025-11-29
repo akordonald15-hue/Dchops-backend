@@ -1,0 +1,37 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.pdb
+*.egg-info/
+dist/
+build/
+
+# Virtual environments
+venv/
+env/
+ENV/
+
+# Django
+*.sqlite3
+media/
+staticfiles/
+static/
+logs/
+
+# Environment variables
+.env
+
+# VS Code
+.vscode/
+
+# PyCharm
+.idea/
+
+# Mac / Windows system files
+.DS_Store
+Thumbs.db
+
+# Migrations backup (optional)
+*/migrations/__pycache__/
