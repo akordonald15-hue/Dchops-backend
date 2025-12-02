@@ -46,6 +46,9 @@ INSTALLED_APPS = [
     'rest_framework',
     'cloudinary',
     'cloudinary_storage',
+
+    #drf
+    "drf_spectacular",
 ]
 
 # ===========================
@@ -151,6 +154,13 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': (
         'rest_framework.permissions.IsAuthenticatedOrReadOnly',
     ),
+     "DEFAULT_RENDERER_CLASSES": (
+        "core.utils.response.StandardJSONRenderer",
+    ),
+    "EXCEPTION_HANDLER": "core.exceptions.custom_exception_handler",
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+    "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
+    "PAGE_SIZE": 10,
 }
 
 # ===========================
@@ -191,3 +201,26 @@ LOGGING = {
         },
     },
 }
+SPECTACULAR_SETTINGS = {
+    "TITLE": "Dchops API",
+    "DESCRIPTION": "API for Dchoops",
+    "VERSION": "1.0.0",
+}
+# Use Redis only in production
+if DEBUG:
+    CACHES = {
+        "default": {
+            "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+            "LOCATION": "local-cache",
+        }
+    }
+else:
+    CACHES = {
+        "default": {
+            "BACKEND": "django_redis.cache.RedisCache",
+            "LOCATION": "redis://127.0.0.1:6379/1",
+            "OPTIONS": {
+                "CLIENT_CLASS": "django_redis.client.DefaultClient",
+            }
+        }
+    }

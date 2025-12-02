@@ -1,4 +1,4 @@
-from rest_framework import viewsets, permissions, status
+from rest_framework import viewsets, permissions, status, generics
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.throttling import UserRateThrottle
@@ -10,22 +10,44 @@ admin_logger = logging.getLogger('admin_actions')
 
 
 # ----------------------------
-#   Permissions
+# Permissions
 # ----------------------------
 class IsOwnerOrAdmin(permissions.BasePermission):
+    """
+    Allow owners to access their orders.
+    Allow staff/admins to access all orders.
+    """
     def has_object_permission(self, request, view, obj):
         return request.user and (request.user.is_staff or obj.user == request.user)
 
 
 # ----------------------------
-#   Throttle for Admin
+# Throttle for Admin
 # ----------------------------
 class AdminThrottle(UserRateThrottle):
     rate = '50/hour'
 
 
 # ----------------------------
-#   Order ViewSet
+# Order Create API (Dedicated endpoint for clarity)
+# ----------------------------
+class OrderCreateAPIView(generics.CreateAPIView):
+    serializer_class = OrderSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        order = serializer.save()  # ✅ Just save()
+
+        return Response({
+            "success": True,
+            "message": "Order created successfully",
+            "data": OrderSerializer(order).data
+        }, status=status.HTTP_201_CREATED)
+
+# ----------------------------
+# Order ViewSet (List/Retrieve/Update for admin/user)
 # ----------------------------
 class OrderViewSet(viewsets.ModelViewSet):
     serializer_class = OrderSerializer
@@ -39,10 +61,10 @@ class OrderViewSet(viewsets.ModelViewSet):
         return Order.objects.filter(user=user).order_by('-created_at')
 
     def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
+        serializer.save()  # ✅ Just save()
 
     # ----------------------------
-    #   Admin manually updates status
+    # Admin manually updates status
     # ----------------------------
     @action(
         detail=True,
@@ -75,12 +97,11 @@ class OrderViewSet(viewsets.ModelViewSet):
         )
 
     # ----------------------------
-    #   Paystack Webhook
+    # Paystack Webhook
     # ----------------------------
     @action(detail=False, methods=['post'], permission_classes=[permissions.AllowAny])
     def paystack_webhook(self, request):
-        data = request.data
-        reference = data.get('reference')
+        reference = request.data.get('reference')
 
         if not reference:
             return Response(
@@ -89,10 +110,7 @@ class OrderViewSet(viewsets.ModelViewSet):
             )
 
         try:
-            # FIXED: correct field name
             order = Order.objects.get(paystack_reference=reference)
-
-            # Update order
             order.paid = True
             order.status = 'PROCESSING'
             order.save()
@@ -101,7 +119,6 @@ class OrderViewSet(viewsets.ModelViewSet):
                 {'message': 'Order payment verified and updated.'},
                 status=status.HTTP_200_OK
             )
-
         except Order.DoesNotExist:
             return Response(
                 {'error': 'Order not found.'},

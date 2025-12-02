@@ -1,5 +1,3 @@
-# payments/views.py
-
 import requests
 import hmac, hashlib
 from django.conf import settings
@@ -10,24 +8,34 @@ from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from rest_framework import status
 
+from drf_spectacular.utils import extend_schema
+
 from orders.models import Order
+from .serializers import (
+    InitializePaymentSerializer,
+    VerifyPaymentSerializer,
+    PaystackWebhookSerializer,
+    PaymentInitResponseSerializer,
+    PaymentVerifyResponseSerializer
+)
 
 
 # ============================================================
 # 1️⃣ INITIALIZE PAYMENT
 # ============================================================
+@extend_schema(
+    request=InitializePaymentSerializer,
+    responses={200: PaymentInitResponseSerializer}
+)
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def initialize_payment(request):
-    """
-    Initialize a Paystack transaction.
-    Frontend sends: { "order_id": <id>, "callback_url": "<url>" }
-    """
-    order_id = request.data.get("order_id")
-    callback_url = request.data.get("callback_url")
 
-    if not order_id:
-        return Response({"detail": "order_id is required"}, status=400)
+    serializer = InitializePaymentSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+
+    order_id = serializer.validated_data["order_id"]
+    callback_url = serializer.validated_data.get("callback_url")
 
     try:
         order = Order.objects.get(id=order_id, user=request.user)
@@ -44,7 +52,7 @@ def initialize_payment(request):
 
     payload = {
         "email": request.user.email,
-        "amount": int(order.total * 100),  # convert naira to kobo
+        "amount": int(order.total * 100),
         "currency": "NGN",
         "reference": f"order-{order.id}",
         "metadata": {"order_id": order.id},
@@ -66,7 +74,7 @@ def initialize_payment(request):
 
     paystack_data = response.json()
 
-    # Store reference in DB
+    # store reference
     order.paystack_reference = paystack_data["data"]["reference"]
     order.save()
 
@@ -75,14 +83,20 @@ def initialize_payment(request):
 
 
 # ============================================================
-# 2️⃣ VERIFY PAYMENT (Frontend confirmation)
+# 2️⃣ VERIFY PAYMENT
 # ============================================================
+@extend_schema(
+    request=VerifyPaymentSerializer,
+    responses={200: PaymentVerifyResponseSerializer}
+)
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def verify_payment(request):
-    reference = request.data.get("reference")
-    if not reference:
-        return Response({"detail": "reference is required"}, status=400)
+
+    serializer = VerifyPaymentSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+
+    reference = serializer.validated_data["reference"]
 
     verify_url = f"{settings.PAYSTACK_BASE_URL}/transaction/verify/{reference}"
 
@@ -102,7 +116,6 @@ def verify_payment(request):
     if data.get("status") != "success":
         return Response({"detail": "Payment not successful"}, status=400)
 
-    # Retrieve order
     order_id = data.get("metadata", {}).get("order_id")
 
     try:
@@ -110,7 +123,6 @@ def verify_payment(request):
     except Order.DoesNotExist:
         return Response({"detail": "Order not found"}, status=404)
 
-    # Mark order as paid
     order.paid = True
     order.save()
 
@@ -120,10 +132,15 @@ def verify_payment(request):
 # ============================================================
 # 3️⃣ PAYSTACK WEBHOOK (SERVER CONFIRMATION)
 # ============================================================
+@extend_schema(
+    request=PaystackWebhookSerializer,
+    responses={200: PaystackWebhookSerializer}
+)
 @csrf_exempt
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def paystack_webhook(request):
+
     signature = request.headers.get("x-paystack-signature")
 
     if not signature:
@@ -139,7 +156,6 @@ def paystack_webhook(request):
     event = request.data.get("event")
     data = request.data.get("data", {})
 
-    # Only handle success events
     if event == "charge.success":
         reference = data.get("reference")
         order_id = data.get("metadata", {}).get("order_id")

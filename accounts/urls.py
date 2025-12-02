@@ -4,15 +4,15 @@ from .views import (
     LoginView,
     RefreshTokenView,
     LogoutView,
-    VerifyEmailView,  
+    VerifyEmailView,
+    OrderListAPIView  
 )
 
 urlpatterns = [
     path('register/', RegisterView.as_view(), name='register'),
+    path('verify-email/', VerifyEmailView.as_view(), name='verify-email'),
     path('login/', LoginView.as_view(), name='login'),
-    path('refresh/', RefreshTokenView.as_view(), name='token_refresh'),
+    path('refresh-token/', RefreshTokenView.as_view(), name='refresh-token'),
     path('logout/', LogoutView.as_view(), name='logout'),
-
-    # Email verification endpoint
-    path('verify-email/', VerifyEmailView.as_view(), name='verify_email'),
+    path('orders/', OrderListAPIView.as_view(), name='order-list'),
 ]

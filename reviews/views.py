@@ -1,4 +1,4 @@
-from rest_framework import viewsets, permissions
+from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.throttling import UserRateThrottle
@@ -12,20 +12,46 @@ admin_logger = logging.getLogger('admin_actions')
 
 
 class AdminThrottle(UserRateThrottle):
-    rate = '50/hour'  # Admin can only make 50 admin-status updates per hour
+    rate = '50/hour'
 
 
 class ReviewViewSet(viewsets.ModelViewSet):
-    queryset = Review.objects.all()
+    queryset = Review.objects.all().order_by('-created_at')
     serializer_class = ReviewSerializer
     permission_classes = [permissions.IsAuthenticatedOrReadOnly, IsOwnerOrReadOnly]
 
-    def perform_create(self, serializer):
-        """
-        Automatically assign logged-in user as the review owner.
-        """
-        serializer.save(user=self.request.user)
+    # -----------------------------
+    # Add request to serializer context
+    # -----------------------------
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context.update({"request": self.request})
+        return context
 
+    def perform_create(self, serializer):
+        serializer.save()  # ✅ Just save()
+
+    # -----------------------------
+    # List reviews with pagination support
+    # Returns paginated response if enabled, otherwise standard list format
+    # -----------------------------
+    def list(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+        page = self.paginate_queryset(queryset)
+        
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+        
+        serializer = self.get_serializer(queryset, many=True)
+        return Response({
+            "results": serializer.data,  # ✅ Changed to "results"
+            "count": queryset.count()
+        })
+
+    # -----------------------------
+    # Admin: update review status
+    # -----------------------------
     @action(
         detail=True,
         methods=['patch'],
@@ -33,21 +59,19 @@ class ReviewViewSet(viewsets.ModelViewSet):
         throttle_classes=[AdminThrottle]
     )
     def update_status(self, request, pk=None):
-        """
-        Admin-only: Update review status.
-        """
         review = self.get_object()
-
         old_status = review.status
         new_status = request.data.get("status")
 
         if not new_status:
-            return Response({"error": "Status is required"}, status=400)
+            return Response(
+                {"error": "Status is required"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
         review.status = new_status
         review.save()
 
-        # Log admin action
         admin_logger.info(
             f"Admin {request.user.username} updated review {review.id} "
             f"status from '{old_status}' to '{new_status}'"
@@ -57,4 +81,4 @@ class ReviewViewSet(viewsets.ModelViewSet):
             "message": "Review status updated successfully",
             "old_status": old_status,
             "new_status": new_status
-        })
+        }, status=status.HTTP_200_OK)
