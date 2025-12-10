@@ -1,6 +1,6 @@
 from .base import *
 
-DEBUG = False
+DEBUG = True
 
 # Allowed hosts MUST come from .env
 ALLOWED_HOSTS = env.list('ALLOWED_HOSTS')
