@@ -35,6 +35,8 @@ INSTALLED_APPS = [
     'menu',
     'orders',
     'reviews',
+    'core',
+    'payments',
 
     # Third-party
     'rest_framework',
