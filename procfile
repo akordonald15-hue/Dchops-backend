@@ -1,0 +1,1 @@
+web: gunicorn 2p-griills-backend.wsgi:application --log-file -
