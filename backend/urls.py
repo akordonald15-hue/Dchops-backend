@@ -1,9 +1,11 @@
 from django.contrib import admin
 from django.urls import path, include
 from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView, SpectacularSwaggerView
+from core.views import HomepageAPIView
 
 
 urlpatterns = [
+    path('', HomepageAPIView.as_view(), name='homepage'),
     path('admin/', admin.site.urls),
     path('api/menu/', include('menu.urls')),
     path('api/accounts/', include('accounts.urls')),
