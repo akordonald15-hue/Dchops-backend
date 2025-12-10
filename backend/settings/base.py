@@ -13,11 +13,15 @@ DEBUG = env('DEBUG')
 
 RENDER_EXTERNAL_HOSTNAME = os.environ.get('RENDER_EXTERNAL_HOSTNAME')
 
-ALLOWED_HOSTS = ['dchops.onrender.com']
+ALLOWED_HOSTS = [
+    "dchops.onrender.com",
+    "localhost",
+    "127.0.0.1"
+]
 
 if RENDER_EXTERNAL_HOSTNAME:
     ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)
-    
+
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -91,6 +95,9 @@ USE_I18N = True
 USE_TZ = True
 
 STATIC_URL = 'static/'
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
+
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
@@ -135,9 +142,13 @@ PAYSTACK_PUBLIC_KEY = env('PAYSTACK_PUBLIC_KEY', default='')
 PAYSTACK_BASE_URL = 'https://api.paystack.co'
 
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",           # React dev server
-    "https://your-production-domain.com",  # production frontend
+    "https://dchops.onrender.com",
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
 ]
+
 
 CORS_ALLOW_CREDENTIALS = True  # allows sending cookies or auth headers
 # base.py

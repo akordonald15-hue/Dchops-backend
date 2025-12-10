@@ -16,10 +16,15 @@ DEBUG = os.getenv("DEBUG", "True") == "True"
 
 RENDER_EXTERNAL_HOSTNAME = os.environ.get('RENDER_EXTERNAL_HOSTNAME')
 
-ALLOWED_HOSTS = ['dchops.onrender.com']
+ALLOWED_HOSTS = [
+    "dchops.onrender.com",
+    "localhost",
+    "127.0.0.1"
+]
 
 if RENDER_EXTERNAL_HOSTNAME:
     ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)
+
 # ===========================
 # PAYSTACK CONFIG
 # ===========================
@@ -69,7 +74,19 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    "whitenoise.middleware.WhiteNoiseMiddleware",
+
 ]
+
+CORS_ALLOWED_ORIGINS = [
+    "https://dchops.onrender.com",
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+]
+
+CORS_ALLOW_CREDENTIALS = True  # allows sending cookies or auth headers
 
 ROOT_URLCONF = 'backend.urls'
 
@@ -142,7 +159,8 @@ USE_TZ = True
 # ===========================
 
 STATIC_URL = 'static/'
-
+STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 # ===========================
 # DEFAULT PRIMARY KEY FIELD
 # ===========================
@@ -232,7 +250,4 @@ else:
     }
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
-MIDDLEWARE = [
-    ...,
-    "whitenoise.middleware.WhiteNoiseMiddleware",
-]
+
