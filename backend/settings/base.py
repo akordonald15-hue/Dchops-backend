@@ -18,6 +18,10 @@ ALLOWED_HOSTS = ["dchops.onrender.com", "localhost", "127.0.0.1"]
 if RENDER_EXTERNAL_HOSTNAME:
     ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)
 
+    ALLOWED_HOSTS.append("dchops.onrender.com")
+# allow any subdomain of render if needed
+ALLOWED_HOSTS += [f"{RENDER_EXTERNAL_HOSTNAME}"] if RENDER_EXTERNAL_HOSTNAME else []
+
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
