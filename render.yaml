@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: dchops-backend
+    env: python
+    plan: free
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "gunicorn 2p-griills-backend.wsgi:application --timeout 600"
+    envVars:
+      - key: DJANGO_SETTINGS_MODULE
+        value: "2p-griills-backend.settings"
+      - key: PYTHON_VERSION
+        value: "3.14"
+      
